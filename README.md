@@ -1,79 +1,87 @@
-docker run -p 28888:27017 \
-    -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \
-    -e MONGO_INITDB_ROOT_PASSWORD=secret \
-    mongo
+
+# Park Connect Demo App
 
 
-mongoimport --drop -d demo  -c location --type json --jsonArray --file ./location.json $*
+## Pre-req
+You have the following : 
+- Kubernetes Cluster
+- Mongo DB running 
+- Helm  v 3.x.x with bitnami repo
+- [Prometheus-Operator](https://github.com/bitnami/charts/tree/master/bitnami/prometheus-operator) 
+- EFK stack 
+
+## Setup
+
+Create new namepace 
 
 
-mongoimport --drop -d demo  \
-            --authenticationDatabase admin \
-            -u mongoadmin -p secret \
-            --port 28888 -c location \
-            --type json --jsonArray --file ./location.json $*
+```bash
+kubectl create cs park-connect
+```
 
+Change environment to park-connect
 
+```bash
+kubens park-connect
+```
 
+>Follow the below steps to deploy mongodb in kubernetes ( Only if you do not have mongodb )
 
---- Paketo 
-pack build paketo-parkc -p . --builder gcr.io/paketo-buildpacks/builder:base
-
-
-
-
-
-
-
-
-============================== MONGO DB ==========================================
-db.createCollection( location)
-
+Install Mongo DB
+```bash
 helm install podmongo \
-  --set mongodbRootPassword=secretpassword,mongodbUsername=mongoadmin,mongodbPassword=secret,mongodbDatabase=admin \
-    bitnami/mongodb
+        --set mongodbRootPassword=secretpassword, mongodbUsername=mongoadmin,mongodbPassword=secret mongodbDatabase=admin \
+        bitnami/mongodb
+```
+
+Login to mongodb and run the below command
 
 
-** Please be patient while the chart is being deployed **
+```bash
+> use demo
 
-MongoDB can be accessed via port 27017 on the following DNS name from within your cluster:
-    podmongo-mongodb.rob-workshop.svc.cluster.local
+> db.createCollection('location')
+```
 
-To get the root password run:
-
-    export MONGODB_ROOT_PASSWORD=$(kubectl get secret --namespace rob-workshop podmongo-mongodb -o jsonpath="{.data.mongodb-root-password}" | base64 --decode)
-
-To get the password for "mongoadmin" run:
-
-    export MONGODB_PASSWORD=$(kubectl get secret --namespace rob-workshop podmongo-mongodb -o jsonpath="{.data.mongodb-password}" | base64 --decode)
-
-To connect to your database run the following command:
-
-    kubectl run --namespace rob-workshop podmongo-mongodb-client --rm --tty -i --restart='Never' --image docker.io/bitnami/mongodb:4.2.6-debian-10-r34 --command -- mongo admin --host podmongo-mongodb --authenticationDatabase admin -u root -p $MONGODB_ROOT_PASSWORD
-
-To connect to your database from outside the cluster execute the following commands:
-
-    kubectl port-forward --namespace rob-workshop svc/podmongo-mongodb 27017:27017 &
-    mongo --host 127.0.0.1 --authenticationDatabase admin -p $MONGODB_ROOT_PASSWORD
+Go to `{WORKSPACE}/scripts/` and paste the content of **db.location.insert.sample**
 
 
 
+## Deploy the app
+
+Change environment to park-connect
+
+```bash
+kubens park-connect
+```
+
+navigate to `{WORKSPACE}\kubernetes` and run the following command 
 
 
-docker push robinfoe/park-connect:tagname
+
+```bash
+kubectl create configmap app-cfg  --from-file=app.properties
+
+kubectl create -f keys-config.yaml
+
+# Remember to change the ingress host
+kubectl create -f ingress.yaml
+
+# if you have prometheus-operator installed, you need to go prometheus namespace and create service monitor
+# remember to change the namespace and portname to monitor.
+kubectl create -f svm-parkconnect.yaml
+
+```
 
 
+Open new terminal and navigate to `{WORKSPACE}` and run the following command 
 
+```bash
+skaffold dev
+```
 
----- IGNORE --- 
+Open another terminal and navigate to `{WORKSPACE}` and run the following command 
 
-How to deploy ?? 
-
-TODO :: 
-Jolokia add on with hawtio
-Skaffold with dockerfile 
-    - need to write deployment, 
-    - service
-    - route
-    - configmap 
-    - secret ( base 64 jks )
+```bash
+mvn clean package
+```
