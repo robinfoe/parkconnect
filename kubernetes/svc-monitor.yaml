@@ -1,0 +1,14 @@
+## Safe to ignore
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: prom-monitor
+  labels:
+    app: park-connect
+spec:
+  ports:
+    - port: 8080
+      name: park-connect-port
+  selector:
+    app: park-connect

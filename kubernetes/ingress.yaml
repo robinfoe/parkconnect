@@ -1,0 +1,14 @@
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: park-connect-ingress
+spec:
+  rules:
+    - host: park-connect.app.10.16.202.119.xip.io
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: park-connect
+              servicePort: 8080
+
